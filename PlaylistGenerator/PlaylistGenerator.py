@@ -16,9 +16,13 @@ MEDIA_EXTENSIONS = ["mp3", "flac", "webm", "mp4", "mkv"]
 
 logger = logging.getLogger("main")
 
+media_info_cache = {}
+
 def get_media_duration(path):
     # ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 input.mp4
-  
+    if path in media_info_cache:
+        return media_info_cache[path]
+
     result = subprocess.run(
         [
             'ffprobe', '-v', "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", path
@@ -27,15 +31,20 @@ def get_media_duration(path):
         )
     
     duration_str = result.stdout
-    return float(duration_str)
+    duration = float(duration_str)
+    media_info_cache[path] = duration
+    return duration
 
 def generate_m3u8(path_dir, playlist_name, files):
     lines = ["#EXTM3U"]
-    for file in files:
-        duration = int(get_media_duration(file))
-        title = os.path.basename(file)
+    for file_abs in files:
+        duration = int(get_media_duration(file_abs))
+        title = os.path.basename(file_abs)
         lines.append(f"#EXTINF:{duration},{title}")
-        lines.append(file)
+
+        file_relative = os.path.relpath(file_abs, path_dir)        
+
+        lines.append(file_relative)
     
     text = "\n".join(lines)
     playlist_path = os.path.join(path_dir, playlist_name)
@@ -81,20 +90,23 @@ def generate_playlists(path_dir, recurse, multilevel_playlists_enabled):
     return playlists, media_local
 
 def main(args):
-    root_path = args.path
+    target_paths = args.paths
+
+    if not target_paths:
+        path = input("Directory: ")
+        target_paths = [path]
+        pass
+
+    for path in target_paths:
+        if not os.path.exists(path):
+            logger.critical(f"Directory {path} does not exist!")
+            return
     
-    if not os.path.exists(root_path):
-        logger.critical(f"Directory {root_path} does not exist!")
-        return
+        if not os.path.isdir(path):
+            logger.critical(f"{path} is not a directory!")
+            return
     
-    if not os.path.isdir(root_path):
-        logger.critical(f"{root_path} is not a directory!")
-        return
-    
-    playlists, files = generate_playlists(root_path, not args.no_recurse, not args.no_multilevel_playlists)
-    logger.info("Generated playlists:")
-    for playlist in playlists:
-        logger.info(playlist)
+        generate_playlists(path, not args.no_recurse, not args.no_multilevel_playlists)
 
 
 if __name__ == "__main__":
@@ -102,7 +114,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("path", help="Top directory with media")
+    parser.add_argument("paths", nargs="*", help="Top directory with media", type=str)
     parser.add_argument("-v", "--verbosity", type=str, default="INFO")
     parser.add_argument("--no-multilevel-playlists", action="store_true")
     parser.add_argument("--no-recurse", action="store_true")
