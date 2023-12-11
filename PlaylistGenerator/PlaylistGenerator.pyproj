@@ -12,7 +12,8 @@
     <Name>PlaylistGenerator</Name>
     <RootNamespace>PlaylistGenerator</RootNamespace>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
-    <CommandLineArguments>-v DEBUG "F:\MUSIC\IC3PEAK - Дискография (2014-2022)"</CommandLineArguments>
+    <CommandLineArguments>
+    </CommandLineArguments>
     <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
