@@ -12,7 +12,7 @@ import subprocess
 
 
 LOG_FORMAT = "%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s"
-MEDIA_EXTENSIONS = ["mp3", "flac", "webm", "mp4", "mkv"]
+MEDIA_EXTENSIONS = ["mp3", "flac", "webm", "mp4", "mkv", "ogg", "mod"]
 
 logger = logging.getLogger("main")
 
