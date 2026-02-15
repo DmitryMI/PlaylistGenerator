@@ -7,12 +7,13 @@ import argparse
 from genericpath import isdir, isfile
 import os
 import os.path
+from pathlib import Path
 import logging
 import subprocess
-
+from urllib.parse import quote
 
 LOG_FORMAT = "%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s"
-MEDIA_EXTENSIONS = ["mp3", "flac", "webm", "mp4", "mkv", "ogg", "mod", "m4a"]
+MEDIA_EXTENSIONS = ["mp3", "flac", "webm", "mp4", "mkv", "ogg", "mod", "m4a", "mpg"]
 
 logger = logging.getLogger("main")
 
@@ -31,20 +32,33 @@ def get_media_duration(path):
         )
     
     duration_str = result.stdout
-    duration = float(duration_str)
+    try:
+        duration = float(duration_str)
+    except:
+        logger.error(f"Failed to get media duration for {path}: {duration_str} is not convertible to float")
+        quit()
+        
     media_info_cache[path] = duration
     return duration
 
 def generate_m3u8(path_dir, playlist_name, files):
+    if not files:
+        logger.info(f"No media found in {path_dir}")
+        return
+        
     lines = ["#EXTM3U"]
     for file_abs in files:
+        
         duration = int(get_media_duration(file_abs))
         title = os.path.basename(file_abs)
         lines.append(f"#EXTINF:{duration},{title}")
+        
+        file_abs_path = Path(file_abs)
+        file_relative = file_abs_path.relative_to(path_dir)
+        posix_path = file_relative.as_posix()
+        encoded_path = quote(posix_path, safe="/")
 
-        file_relative = os.path.relpath(file_abs, path_dir)        
-
-        lines.append(file_relative)
+        lines.append(encoded_path)
     
     text = "\n".join(lines)
     playlist_path = os.path.join(path_dir, playlist_name)
