@@ -46,6 +46,22 @@ class PlaylistGeneratorTests(unittest.TestCase):
             "/storage/emulated/0/Music/Sub%20Dir/Track%2001%20%5Blive%5D.mp3",
         )
 
+    def test_encode_playlist_path_keeps_plus_signs_literal(self):
+        root = Path("C:/Music")
+        media = root / "Artist+Name" / "Track+01.flac"
+
+        encoded = playlist_generator.encode_playlist_path(
+            media,
+            playlist_dir=root,
+            library_root_dir=root,
+            absolute_path_prefix="/storage/emulated/0/Music",
+        )
+
+        self.assertEqual(
+            encoded,
+            "/storage/emulated/0/Music/Artist+Name/Track+01.flac",
+        )
+
     def test_single_level_playlists_are_default(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             root = Path(tmp_dir)
