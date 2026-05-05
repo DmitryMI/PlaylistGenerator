@@ -8,7 +8,6 @@ import os
 import os.path
 from pathlib import Path
 import logging
-import re
 import subprocess
 from urllib.parse import quote
 
@@ -94,29 +93,6 @@ def generate_m3u8(path_dir, playlist_name, files, library_root_dir=None, absolut
     
     logger.info(f"Playlist generated: {playlist_path}")
 
-def sanitize_playlist_path_component(name):
-    sanitized = re.sub(r"[\[\]\(\)\{\}]", "_", name).strip()
-    return sanitized or "_"
-
-def get_playlist_output_location(source_dir, library_root_dir, playlist_output_dir=None):
-    source_path = Path(source_dir)
-
-    if not playlist_output_dir:
-        return source_path, f"{source_path.name}.m3u8"
-
-    library_root_path = Path(library_root_dir)
-    output_root_path = Path(playlist_output_dir)
-    relative_dir = source_path.relative_to(library_root_path)
-
-    if relative_dir.parts:
-        sanitized_parts = [sanitize_playlist_path_component(part) for part in relative_dir.parts[:-1]]
-        output_dir = output_root_path.joinpath(*sanitized_parts) if sanitized_parts else output_root_path
-    else:
-        output_dir = output_root_path
-
-    playlist_name = f"{sanitize_playlist_path_component(source_path.name)}.m3u8"
-    return output_dir, playlist_name
-
 def is_media_file(entry_abs):
     ext = os.path.splitext(entry_abs)[1][1:].lower()
     if ext not in MEDIA_EXTENSIONS:
@@ -131,18 +107,13 @@ def generate_playlists(
     multilevel_playlists_enabled,
     library_root_dir=None,
     absolute_path_prefix=None,
-    playlist_output_dir=None,
 ):
     logger.debug(f"Entering directory: {path_dir}")    
 
     if library_root_dir is None:
         library_root_dir = path_dir
 
-    playlist_dir_local, playlist_name_local = get_playlist_output_location(
-        path_dir,
-        library_root_dir,
-        playlist_output_dir=playlist_output_dir,
-    )
+    playlist_name_local = os.path.basename(path_dir) + ".m3u8"
 
     media_local = []
     playlists = [playlist_name_local]
@@ -165,7 +136,6 @@ def generate_playlists(
                     multilevel_playlists_enabled,
                     library_root_dir=library_root_dir,
                     absolute_path_prefix=absolute_path_prefix,
-                    playlist_output_dir=playlist_output_dir,
                 )
                 if multilevel_playlists_enabled:
                     media_local += media_subdirs
@@ -175,7 +145,7 @@ def generate_playlists(
       
             
     generate_m3u8(
-        str(playlist_dir_local),
+        path_dir,
         playlist_name_local,
         media_local,
         library_root_dir=library_root_dir,
@@ -207,7 +177,6 @@ def main(args):
             args.multilevel_playlists,
             library_root_dir=path,
             absolute_path_prefix=args.absolute_path_prefix,
-            playlist_output_dir=args.playlist_output_dir,
         )
 
 
@@ -245,14 +214,6 @@ if __name__ == "__main__":
         help=(
             "Write playlist entries as absolute POSIX paths rooted at this prefix, "
             "for example /storage/emulated/0/Music for Android VLC."
-        ),
-    )
-    parser.add_argument(
-        "--playlist-output-dir",
-        type=str,
-        help=(
-            "Write playlist files into a separate directory tree with bracket-safe names. "
-            "Useful for Android VLC when the source folder or playlist name contains brackets."
         ),
     )
 
